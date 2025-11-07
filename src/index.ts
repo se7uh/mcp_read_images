@@ -50,10 +50,9 @@ class McpError extends Error {
   }
 }
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-if (!OPENROUTER_API_KEY) {
-  throw new Error('OPENROUTER_API_KEY environment variable is required');
-}
+const OPENAI_API_BASE = (process.env.OPENAI_API_BASE || 'https://api.openai.com/v1').replace(/\/+$/, '');
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const DEFAULT_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
 async function analyzeImage(imagePath: string, question?: string, model?: string): Promise<string> {
   // Validate absolute path
@@ -97,9 +96,9 @@ async function analyzeImage(imagePath: string, question?: string, model?: string
 
     const base64Image = resizedBuffer.toString('base64');
     
-    // Analyze with OpenRouter
+    // Analyze with OpenAI-compatible API
     const requestBody = {
-      model: model || "anthropic/claude-3.5-sonnet",
+      model: model || DEFAULT_MODEL,
       messages: [
         {
           role: "user",
@@ -119,31 +118,66 @@ async function analyzeImage(imagePath: string, question?: string, model?: string
       ]
     };
 
-    console.error('Sending request to OpenRouter...');
+    console.error('Sending request to OpenAI-compatible API...');
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+
+    if (OPENAI_API_KEY) {
+      headers['Authorization'] = `Bearer ${OPENAI_API_KEY}`;
+    }
+
+    const response = await fetch(`${OPENAI_API_BASE}/chat/completions`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://github.com/bendichter/read_images',
-        'X-Title': 'Image Analysis Tool'
-      },
+      headers,
       body: JSON.stringify(requestBody)
     });
-    
+
     console.error('Response status:', response.status);
     
     const responseText = await response.text();
     console.error('Response text:', responseText);
     
     if (!response.ok) {
-      throw new Error(`OpenRouter API error: ${response.statusText}\nDetails: ${responseText}`);
+      throw new Error(`OpenAI-compatible API error: ${response.statusText}\nDetails: ${responseText}`);
     }
-    
+
     const analysis = JSON.parse(responseText);
-    console.error('OpenRouter API response:', JSON.stringify(analysis, null, 2));
-    return analysis.choices[0].message.content;
+    console.error('OpenAI-compatible API response:', JSON.stringify(analysis, null, 2));
+
+    const choice = analysis.choices?.[0];
+    if (!choice || !choice.message) {
+      throw new Error('No completion choices returned by the API');
+    }
+
+    const messageContent = choice.message.content;
+    if (typeof messageContent === 'string') {
+      return messageContent;
+    }
+
+    if (Array.isArray(messageContent)) {
+      const textParts = messageContent
+        .map((part: unknown) => {
+          if (typeof part === 'string') {
+            return part;
+          }
+          if (typeof part === 'object' && part !== null && 'type' in part) {
+            const typedPart = part as { type?: string; text?: string };
+            if (typedPart.type === 'text' && typeof typedPart.text === 'string') {
+              return typedPart.text;
+            }
+          }
+          return '';
+        })
+        .filter((text: string) => text.length > 0);
+
+      if (textParts.length > 0) {
+        return textParts.join('\n');
+      }
+    }
+
+    throw new Error('Completion response did not contain text content');
   } catch (error) {
     console.error('Error processing image:', error);
     throw error;
@@ -178,7 +212,7 @@ class ImageAnalysisServer {
       tools: [
         {
           name: 'analyze_image',
-          description: 'Analyze an image using OpenRouter vision models (default: anthropic/claude-3.5-sonnet)',
+          description: `Analyze an image using an OpenAI-compatible vision model (default: ${DEFAULT_MODEL})`,
           inputSchema: {
             type: 'object',
             properties: {
@@ -192,7 +226,7 @@ class ImageAnalysisServer {
               },
               model: {
                 type: 'string',
-                description: 'OpenRouter model to use (e.g., anthropic/claude-3-opus-20240229)'
+                description: `Model to use (e.g., ${DEFAULT_MODEL})`
               }
             },
             required: ['image_path']

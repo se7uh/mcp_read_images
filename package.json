@@ -1,7 +1,7 @@
 {
   "name": "@catalystneuro/mcp_read_images",
   "version": "0.1.0",
-  "description": "MCP server for analyzing images using OpenRouter vision models",
+  "description": "MCP server for analyzing images using OpenAI-compatible vision models",
   "type": "module",
   "main": "build/index.js",
   "bin": {
@@ -24,9 +24,10 @@
     "sharp": "^0.32.1"
   },
   "peerDependencies": {
-    "@modelcontextprotocol/sdk": "^0.1.0"
+    "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.21.0",
     "@types/node": "^18.0.0",
     "@types/node-fetch": "^2.6.1",
     "@types/sharp": "^0.31.1",
@@ -37,8 +38,9 @@
     "model-context-protocol",
     "vision",
     "image-analysis",
-    "claude",
-    "openrouter"
+    "openai",
+    "openrouter",
+    "compatibility"
   ],
   "author": "CatalystNeuro",
   "license": "MIT",

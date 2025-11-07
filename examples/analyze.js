@@ -21,9 +21,9 @@ const result2 = await use_mcp_tool({
   arguments: {
     image_path: "./sample.jpg",
     question: "What colors are most prominent in this image?",
-    model: "anthropic/claude-3-opus-20240229"
+    model: "gpt-4.1-mini"
   }
 });
 
-console.log('\nAnalysis with Claude-3-opus:');
+console.log('\nAnalysis with gpt-4.1-mini:');
 console.log(result2);
