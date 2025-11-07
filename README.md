@@ -1,6 +1,6 @@
 # MCP Read Images
 
-An MCP server for analyzing images using OpenRouter vision models. This server provides a simple interface to analyze images using various vision models like Claude-3.5-sonnet and Claude-3-opus through the OpenRouter API.
+An MCP server for analyzing images using any OpenAI-compatible chat completion API. This server provides a simple interface to analyze images by sending them to models that support multimodal prompts.
 
 ## Installation
 
@@ -10,7 +10,11 @@ npm install @catalystneuro/mcp_read_images
 
 ## Configuration
 
-The server requires an OpenRouter API key. You can get one from [OpenRouter](https://openrouter.ai/keys).
+The server expects three environment variables that describe the OpenAI-compatible endpoint you want to use:
+
+* `OPENAI_API_BASE` – The base URL of the API, including the `/v1` suffix (e.g. `https://api.openai.com/v1` or `http://localhost:11434/v1`).
+* `OPENAI_API_KEY` – Optional API key that will be sent in the `Authorization` header. Leave empty if your endpoint does not require authentication.
+* `OPENAI_MODEL` – Default model name to use when one is not supplied in the tool call.
 
 Add the server to your MCP settings file (usually located at `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` for VSCode):
 
@@ -20,8 +24,9 @@ Add the server to your MCP settings file (usually located at `~/Library/Applicat
     "read_images": {
       "command": "read_images",
       "env": {
-        "OPENROUTER_API_KEY": "your-api-key-here",
-        "OPENROUTER_MODEL": "anthropic/claude-3.5-sonnet"  // optional, defaults to claude-3.5-sonnet
+        "OPENAI_API_BASE": "https://api.openai.com/v1",
+        "OPENAI_API_KEY": "your-api-key-here", // optional
+        "OPENAI_MODEL": "gpt-4o-mini" // optional, defaults to gpt-4o-mini
       },
       "disabled": false,
       "autoApprove": []
@@ -52,7 +57,7 @@ use_mcp_tool({
   arguments: {
     image_path: "/path/to/image.jpg",
     question: "What do you see in this image?",
-    model: "anthropic/claude-3-opus-20240229"  // overrides default and settings
+    model: "gpt-4.1-mini"  // overrides default and settings
   }
 });
 ```
@@ -61,15 +66,8 @@ use_mcp_tool({
 
 The model is selected in the following order of precedence:
 1. Model specified in the tool call (`model` argument)
-2. Model specified in MCP settings (`OPENROUTER_MODEL` environment variable)
-3. Default model (anthropic/claude-3.5-sonnet)
-
-### Supported Models
-
-The following OpenRouter models have been tested:
-- anthropic/claude-3.5-sonnet
-- anthropic/claude-3-opus-20240229
-
+2. Model specified in MCP settings (`OPENAI_MODEL` environment variable)
+3. Default model (`gpt-4o-mini`)
 ## Features
 
 - Automatic image resizing and optimization
@@ -77,17 +75,6 @@ The following OpenRouter models have been tested:
 - Support for custom questions about images
 - Detailed error messages
 - Automatic JPEG conversion and quality optimization
-
-## Error Handling
-
-The server handles various error cases:
-- Invalid image paths
-- Missing API keys
-- Network errors
-- Invalid model selections
-- Image processing errors
-
-Each error will return a descriptive message to help diagnose the issue.
 
 ## Development
 
